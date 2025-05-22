@@ -1,16 +1,46 @@
 # main.py
 
 import logging
+import asyncio
 from config import POLYGON_API_KEY, DEFAULT_TICKER, DEFAULT_START_DATE, DEFAULT_END_DATE
 from data_acquirer import fetch_stock_data
 from data_processor import preprocess_data, save_data_to_csv, load_data_from_csv
+from realtime_data import RealTimeDataHandler
 
 # Configure basic logging for the main script
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(module)s - %(message)s')
 
+async def handle_realtime_data(trade_data):
+    """
+    Callback function to handle incoming real-time trade data.
+    """
+    logging.info(f"New trade: {trade_data}")
+
+async def run_realtime_pipeline(tickers: list[str], api_key: str):
+    """
+    Runs the real-time data pipeline for specified tickers.
+    """
+    logging.info(f"--- Starting real-time pipeline for {tickers} ---")
+    
+    handler = RealTimeDataHandler(api_key)
+    
+    try:
+        # Subscribe to real-time data
+        await handler.subscribe(tickers, callback=handle_realtime_data)
+        
+        # Start streaming
+        await handler.start_streaming()
+    except KeyboardInterrupt:
+        logging.info("Received keyboard interrupt, shutting down...")
+    except Exception as e:
+        logging.error(f"Error in real-time pipeline: {e}")
+    finally:
+        await handler.close()
+        logging.info("--- Real-time pipeline finished ---")
+
 def run_pipeline(ticker: str, start_date: str, end_date: str, api_key: str):
     """
-    Runs the data acquisition and processing pipeline for a given stock.
+    Runs the historical data acquisition and processing pipeline for a given stock.
     """
     logging.info(f"--- Starting pipeline for {ticker} ---")
 
@@ -73,17 +103,29 @@ if __name__ == "__main__":
         logging.error("CRITICAL: POLYGON_API_KEY is not set in config.py. Please set your API key.")
         logging.error("The application will not run without a valid API key.")
     else:
-        # You can run the pipeline for one or more tickers
-        tickers_to_process = [DEFAULT_TICKER, "MSFT"] # Example: Apple and Microsoft
+        # You can run either historical or real-time pipeline
+        mode = input("Enter mode (historical/realtime): ").lower()
         
-        # Use dates from config or define here
-        start = DEFAULT_START_DATE
-        # Ensure end_date is not in the future if Polygon API has restrictions for free tier
-        end = DEFAULT_END_DATE 
+        if mode == "historical":
+            # Historical data pipeline
+            tickers_to_process = [DEFAULT_TICKER, "MSFT"] # Example: Apple and Microsoft
+            start = DEFAULT_START_DATE
+            end = DEFAULT_END_DATE 
 
-        for t in tickers_to_process:
-            run_pipeline(ticker=t, start_date=start, end_date=end, api_key=POLYGON_API_KEY)
-            logging.info("\n") # Add a newline for better readability between tickers
+            for t in tickers_to_process:
+                run_pipeline(ticker=t, start_date=start, end_date=end, api_key=POLYGON_API_KEY)
+                logging.info("\n") # Add a newline for better readability between tickers
 
-        logging.info("All specified pipelines have completed.")
+            logging.info("All specified historical pipelines have completed.")
+            
+        elif mode == "realtime":
+            # Real-time data pipeline
+            tickers = input("Enter tickers to monitor (comma-separated): ").split(',')
+            tickers = [t.strip().upper() for t in tickers]
+            
+            # Run the real-time pipeline
+            asyncio.run(run_realtime_pipeline(tickers, POLYGON_API_KEY))
+            
+        else:
+            logging.error("Invalid mode selected. Please choose 'historical' or 'realtime'.")
 

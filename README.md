@@ -1,6 +1,6 @@
 # Trading Project
 
-A Python project for fetching and analyzing stock market data using the Polygon.io API.
+The python project requires `python>=3.10`
 
 ## Setup
 
@@ -39,6 +39,25 @@ pip install -r requirements.txt
    5. Variable name: `POLYGON_API_KEY`
    6. Variable value: Your API key
    7. Click OK
+
+   **Linux/macOS (temporary, for current session):**
+   ```bash
+   export POLYGON_API_KEY="your-api-key-here"
+   ```
+
+   **For permanent setup in Linux:**
+   1. Open your shell's configuration file in a text editor:
+   ```bash
+   nano ~/.bashrc
+   ```
+   2. Add the following line at the end of the file:
+   ```bash
+   export POLYGON_API_KEY="your-api-key-here"
+   ```
+   3. Save the file and reload it:
+   ```bash
+   source ~/.bashrc
+   ```
 
 ## Usage
 
